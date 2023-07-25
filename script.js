@@ -91,7 +91,7 @@ var GameEngine = {
         }
     
         // Display score
-        ctx.fillStyle = 'white';
+        ctx.fillStyle = 'green';
         ctx.font = '20px Arial';
         ctx.fillText('Score: ' + this.score, 10, 30);
     },
@@ -253,24 +253,44 @@ var asteroid = new Asteroid(500, groundLevel, 2);
 GameEngine.entities.push(asteroid);
 
 
+var mouseIsDown = false;
+var mouseIsUp = false;
+var touchIsDown = false;
+var touchIsUp = false;
 
 canvas.addEventListener('mousedown', function(e) {
-    astronaut.jump();
+    mouseIsDown = true;
+    mouseIsUp = false;
 });
 
 canvas.addEventListener('mouseup', function(e) {
-    astronaut.stopJump();
+    mouseIsDown = false;
+    mouseIsUp = true;
 });
 
+
 canvas.addEventListener('touchstart', function(e) {
-    e.preventDefault();  // Prevent the browser from doing the default action
-    astronaut.jump();
+    touchIsDown = true;
+    touchIsUp = false;
 });
 
 canvas.addEventListener('touchend', function(e) {
-    e.preventDefault();  // Prevent the browser from doing the default action
-    astronaut.stopJump();
+    touchIsDown = false;
+    touchIsUp = true;
 });
+
+setInterval(function() {
+    if (mouseIsDown || touchIsDown) {
+        astronaut.jump();
+    } 
+    if (mouseIsUp || touchIsUp) {
+        astronaut.stopJump();
+        mouseIsUp = false;
+        touchIsUp = false;
+    }
+}, 1000 / 30);  // Run the callback approximately 60 times per second
+
+
 
 window.addEventListener('keydown', function(e) {
     if (e.keyCode === 32) {
