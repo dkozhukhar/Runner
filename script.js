@@ -1,9 +1,11 @@
 // Create a canvas element
 var canvas = document.createElement("canvas");
-
+  
 // Set the canvas to fill the screen
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
+canvas.style.margin = "0";
+canvas.style.padding = "0";
 
 // Append the canvas to the body of the page
 document.body.appendChild(canvas);
