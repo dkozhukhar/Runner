@@ -66,7 +66,7 @@ var GameEngine = {
         // Check for collisions with all asteroids
         for (var i = 0; i < this.entities.length; i++) {
             if (this.entities[i] instanceof Asteroid && astronaut.collidesWith(this.entities[i])) {
-                this.gameOver();
+                astronaut.hit = true;  // Set hit to true instead of calling gameOver
                 break;
             }
         }
@@ -121,8 +121,29 @@ var Astronaut = function(x, y) {
     this.velocityY = 0;
     this.onGround = true;
     this.radius = 20;
+    this.hit = false;
+    this.knockbackDuration = 0;  // Duration of the knockback effect in frames
+    this.knockbackForce = 10;  // The upward force applied when hit
+    this.jumpForce = 0;
+    this.maxJumpForce = 15;  // The maximum force of the jump
+    this.jumpChargeRate = 0.5;  // The rate at which the jump force increases
+    this.jumpButtonDown = false;  // New property to keep track of whether the jump button is down
+
   
     this.update = function() {
+        if (this.hit) {
+            // Apply an upward force when hit
+            this.velocityY = -this.knockbackForce;
+            this.onGround = false;
+            this.hit = false;
+            this.knockbackDuration = 30;  // Set the knockback duration to some value
+        } else if (this.knockbackDuration > 0) {
+            this.knockbackDuration--;
+            if (this.knockbackDuration <= 0) {
+                this.velocityY = 0;  // Reset the upward velocity after the knockback effect ends
+            }
+        }
+      
         // If not on the ground, apply gravity
         if (!this.onGround) {
             this.velocityY += 0.5; // Gravity
@@ -135,20 +156,55 @@ var Astronaut = function(x, y) {
             this.onGround = true;
             this.velocityY = 0;
         }
+
+        // Increase jumpForce while the key/mouse/touch is held down and the astronaut is on the ground
+        if (this.jumpButtonDown && this.onGround && this.jumpForce < this.maxJumpForce) {
+            this.jumpForce += this.jumpChargeRate;
+        }
+
+        // Automatically jump when maximum charge is reached
+        if (this.jumpForce >= this.maxJumpForce && this.onGround) {
+            this.stopJump();
+        }
+      
     };
 
     this.jump = function() {
-        if (this.onGround) {
-            this.velocityY = -10; // Jump speed
+        // Set jumpButtonDown to true, but don't start charging yet
+        // Charging will start in the update method when the astronaut is on the ground
+        this.jumpButtonDown = true;
+    };
+
+
+    this.stopJump = function() {
+        if (this.jumpForce > 0 && this.onGround) {
+            this.velocityY = -this.jumpForce;  // Apply the jump force
+            this.jumpForce = 0;  // Reset the jump force
             this.onGround = false;
         }
+        // Set jumpButtonDown to false when the jump button is released
+        this.jumpButtonDown = false;
     };
 
     this.render = function(ctx) {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, false);
-        ctx.fillStyle = 'blue';
+
+        // Change the color based on the jump charge
+        var chargePercentage = this.jumpForce / this.maxJumpForce;
+        var r = Math.floor(255 * chargePercentage);
+        var g = Math.floor(255 * (1 - chargePercentage));
+        ctx.fillStyle = 'rgb(' + r + ', ' + g + ', 255)';  // Interpolate between blue and red
+
         ctx.fill();
+
+        // Draw a smaller circle when on the ground
+        if (this.onGround) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius / 2, 0, 2 * Math.PI, false);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+        }
     };
 
     this.collidesWith = function(other) {
@@ -170,6 +226,7 @@ var Asteroid = function(x, y, speed) {
     this.x = x;
     this.y = y;
     this.speed = speed;
+    this.radius = 30;  // Add this line
 
     this.update = function() {
         this.x -= this.speed;
@@ -185,7 +242,7 @@ var Asteroid = function(x, y, speed) {
       
     this.render = function(ctx) {
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 30, 0, 2 * Math.PI, false);
+        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, false);  // Use this.radius here
         ctx.fillStyle = 'gray';
         ctx.fill();
     };
@@ -197,15 +254,50 @@ GameEngine.entities.push(asteroid);
 
 
 
-// Assuming you have a reference to your canvas element
-canvas.addEventListener('touchstart', function(e) {
+canvas.addEventListener('mousedown', function(e) {
     astronaut.jump();
 });
 
+canvas.addEventListener('mouseup', function(e) {
+    astronaut.stopJump();
+});
 
+canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();  // Prevent the browser from doing the default action
+    astronaut.jump();
+});
+
+canvas.addEventListener('touchend', function(e) {
+    e.preventDefault();  // Prevent the browser from doing the default action
+    astronaut.stopJump();
+});
+
+window.addEventListener('keydown', function(e) {
+    if (e.keyCode === 32) {
+        astronaut.jump();
+    }
+});
+
+window.addEventListener('keyup', function(e) {
+    if (e.keyCode === 32) {
+        astronaut.stopJump();
+    }
+});
 
 // Initialize and run game
 GameEngine.init();
 GameEngine.run();
 
 
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        // The tab is inactive, pause the game.
+        clearInterval(GameEngine.asteroidSpawnInterval);
+    } else {
+        // The tab is active, resume the game.
+        GameEngine.asteroidSpawnInterval = setInterval(() => GameEngine.spawnAsteroid(), 2000);
+        if (GameEngine.currentState !== GameEngine.states.gameOver) {
+            GameEngine.run();
+        }
+    }
+});
