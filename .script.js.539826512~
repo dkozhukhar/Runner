@@ -95,8 +95,7 @@ var GameEngine = {
         ctx.font = '20px Arial';
         ctx.fillText('Time: ' + this.time, 10, 30);
         ctx.fillText('Asteroids: ' + this.entities.length, 10, 60);
-        ctx.fillText('(this.maxY - this.minY): ' + (this.maxY - this.minY), 10, 90);
-        ctx.fillText('1000 * 150 / (this.maxY - this.minY): ' + 1000 * 150 / (this.maxY - this.minY), 10, 120);
+        //
     },
 
     
